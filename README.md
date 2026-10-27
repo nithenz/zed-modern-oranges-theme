@@ -110,7 +110,6 @@ After changing anything, run `node sync_theme.mjs` and then `zed: reload extensi
 
 ## 🙏 Credits
 
-- [Modern Oranges](https://github.com/nithenz/modern-oranges-theme) by xpowercoder / nithenz
 - The blur levels and translucent UI approach come from [Catppuccin Blur for Zed](https://github.com/jenslys/zed-catppuccin-blur) by Jens Lystad
 
 ## 📄 License
