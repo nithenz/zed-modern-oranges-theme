@@ -1,0 +1,7 @@
+id = "modern-oranges-theme"
+name = "Modern Oranges"
+schema_version = 1
+version = "0.1.0"
+authors = ["nithenz <nithenzzz@gmail.com>"]
+description = "Warm orange themes with a blurred, translucent window background"
+repository = "https://github.com/nithenz/zed-modern-oranges-theme"

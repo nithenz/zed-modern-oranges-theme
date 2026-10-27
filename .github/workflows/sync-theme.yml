@@ -1,0 +1,51 @@
+name: Sync Theme
+
+on:
+  schedule:
+    - cron: "0 0 * * *"
+  workflow_dispatch:
+  repository_dispatch:
+    types: [modern-oranges-update]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Configure Git
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+
+      - name: Sync theme
+        run: node sync_theme.mjs
+
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.COMMITTER_TOKEN || secrets.GITHUB_TOKEN }}
+          commit-message: "chore: sync theme"
+          title: "chore: sync theme"
+          body: |
+            Automated theme sync with the latest Modern Oranges VS Code theme.
+
+            - Synced with the latest Modern Oranges themes
+            - Applied blur customizations
+            - Regenerated all variants
+          branch: chore/theme-sync
+          delete-branch: true
+          labels: |
+            theme
+            automated pr
+          add-paths: |
+            themes/modern-oranges-blur.json

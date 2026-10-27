@@ -1,0 +1,86 @@
+name: Manual Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version_bump:
+        description: "Version bump type"
+        required: true
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+
+permissions:
+  actions: write
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: main
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Get current version
+        id: version
+        run: |
+          CURRENT_VERSION=$(grep '^version = ' extension.toml | sed 's/version = "\(.*\)"/\1/')
+          NEW_VERSION=$(node -e '
+            const [major, minor, patch] = process.argv[1].split(".").map(Number);
+            const bump = process.argv[2];
+            const next = bump === "major" ? [major + 1, 0, 0]
+                       : bump === "minor" ? [major, minor + 1, 0]
+                       : [major, minor, patch + 1];
+            console.log(next.join("."));
+          ' "${CURRENT_VERSION}" "${{ github.event.inputs.version_bump }}")
+          echo "new_version=${NEW_VERSION}" >> "$GITHUB_OUTPUT"
+          echo "Current version: ${CURRENT_VERSION}"
+          echo "New version: ${NEW_VERSION}"
+
+      - name: Sync theme
+        run: node sync_theme.mjs
+
+      - name: Update extension.toml version
+        run: |
+          sed -i "s/^version = .*/version = \"${{ steps.version.outputs.new_version }}\"/" extension.toml
+
+      - name: Commit changes
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add themes/modern-oranges-blur.json extension.toml
+          git commit -m "chore: prepare release ${{ steps.version.outputs.new_version }}"
+
+      - name: Push changes to main
+        run: |
+          git push origin main
+
+      - name: Create and push tag
+        run: |
+          git tag v${{ steps.version.outputs.new_version }}
+          git push origin v${{ steps.version.outputs.new_version }}
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: v${{ steps.version.outputs.new_version }}
+          tag_name: v${{ steps.version.outputs.new_version }}
+          generate_release_notes: true
+
+      - name: Publish to Zed
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG_NAME: v${{ steps.version.outputs.new_version }}
+        run: |
+          gh workflow run publish-extension.yml \
+            --ref "${TAG_NAME}" \
+            --field tag_name="${TAG_NAME}"
